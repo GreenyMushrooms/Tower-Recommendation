@@ -93,11 +93,12 @@
         const towers = {
             "ToAST": { difficulty: 1.21, skills: ["Mixed"], next: ["ToA", "ToM"], fullName: " Tower of Annoyingly Simple Trials", x: 500, y: 1000 },
             "ToA": { difficulty: 1.5, skills: ["Mixed"], next: ["ToM"], fullName: "Tower of Anger", x: 800, y: 800 },
-            "ToM": { difficulty: 2.18, skills: ["Mixed"], next: ["ToH", "ToK"], fullName: "Tower of Madness", x: 800, y: 1200 },
-            "ToH": { difficulty: 3.45, skills: ["Mixed"], next: ["ToKY"], fullName: "Tower of Hecc", x: 1100, y: 1000 },
+            "ToM": { difficulty: 2.18, skills: ["Mixed"], next: ["ToNI","ToH", "ToK"], fullName: "Tower of Madness", x: 800, y: 1200 },
+            "ToNI": { difficulty: 2.8, skills: ["Mixed"], next: ["ToH","ToK"], fullName: " Tower of Noticeable Infuriation", x: 1000, y: 1100 },
+            "ToH": { difficulty: 3.45, skills: ["Mixed"], next: ["ToKY"], fullName: "Tower of Hecc", x: 1200, y: 1200 },
             "ToK": { difficulty: 3.47, skills: ["Mixed"], next: ["ToH"], fullName: "Tower of Killjoys", x: 1100, y: 800 },
-            "ToKY": { difficulty: 4.14, skills: ["Mixed"], next: ["ToS"], fullName: "Tower of Keyboard Yeeting", x: 1300, y: 900 },
-            "ToS": { difficulty: 5, skills: ["Mixed"], next: [], fullName: "Tower of Stress", x: 1500, y: 900 },
+            "ToKY": { difficulty: 4.14, skills: ["Mixed"], next: ["ToS"], fullName: "Tower of Keyboard Yeeting", x: 1400, y: 900 },
+            "ToS": { difficulty: 5, skills: ["Mixed"], next: [], fullName: "Tower of Stress", x: 1600, y: 900 },
         };
 
         const canvas = document.getElementById('canvas');
@@ -124,33 +125,80 @@
         // Draw towers on the canvas with color based on difficulty
         function drawTower(name, x, y) {
             let towerColor;
+            let inlineColor;
+
             switch (true) {
-    case (towers[name].difficulty <= 2):
+    case (towers[name].difficulty < 2):
         towerColor = '#4b974b'; // easy
+        inlineColor = '#3c6e3a';
         break;
-    case (towers[name].difficulty <= 3):
+    case (towers[name].difficulty < 3):
         towerColor = '#dbdb00'; // medium
+        inlineColor = '#b9b900';
         break;
-    case (towers[name].difficulty <= 4):
+    case (towers[name].difficulty < 4):
         towerColor = '#FE7C00'; //hard
+        inlineColor = '#e56500';
         break;
     case (towers[name].difficulty < 5):
         towerColor = '#FF3232'; // difficult
+        inlineColor = '#e02626'
         break;
-    case (towers[name].difficulty <= 6):
+        case (towers[name].difficulty < 6):
         towerColor = '#A00000'; // Challenging
+        inlineColor = '#7F0000'; // Darker shade for Challenging
         break;
-    default:
-        towerColor = '#6c757d'; // Gray for difficulty > 3
+    case (towers[name].difficulty < 7):
+        towerColor = '#19222D'; // Intense
+        inlineColor = '#10161A'; // Darker shade for Intense
+        break;
+    case (towers[name].difficulty < 8):
+        towerColor = '#C900C8'; // Remorseless
+        inlineColor = '#9B008F'; // Darker shade for Remorseless
+        break;
+    case (towers[name].difficulty < 9):
+        towerColor = '#0000FF'; // Insane
+        inlineColor = '#0000CC'; // Darker shade for Insane
+        break;
+    case (towers[name].difficulty < 10):
+        towerColor = '#0287FF'; // Extreme
+        inlineColor = '#026BFF'; // Darker shade for Extreme
+        break;
+    case (towers[name].difficulty < 11):
+        towerColor = '#00FFFF'; // Terrifying
+        inlineColor = '#00B2B2'; // Darker shade for Terrifying
+        break;
+    case (towers[name].difficulty < 12):
+        towerColor = '#FFFFFF'; // Catastrophic
+        inlineColor = '#D9D9D9'; // Darker shade for Catastrophic
+        break;
+    case (towers[name].difficulty < 13):
+        towerColor = '#9691FF'; // Horrific
+        inlineColor = '#7A6FE6'; // Darker shade for Horrific
+        break;
+    case (towers[name].difficulty < 14):
+        towerColor = '#4B00C8'; // Unreal
+        inlineColor = '#3F00A6'; // Darker shade for Unreal
         break;
 }
 
-            ctx.fillStyle = towerColor;
-            ctx.fillRect(x + canvasOffsetX, y + canvasOffsetY, 150, 75);
-            ctx.fillStyle = 'black';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(name, x + 75 + canvasOffsetX, y + 40 + canvasOffsetY);
+            // Draw the tower color
+    ctx.fillStyle = towerColor;
+    ctx.fillRect(x + canvasOffsetX, y + canvasOffsetY, 150, 75);
+    
+    // Draw the inline with a darker color under the tower
+    ctx.strokeStyle = inlineColor;
+    ctx.lineWidth = 5; // Line thickness
+    ctx.beginPath();
+    ctx.moveTo(x + canvasOffsetX, y + 75 + canvasOffsetY); // Start at the bottom of the tower
+    ctx.lineTo(x + 150 + canvasOffsetX, y + 75 + canvasOffsetY); // End at the bottom of the tower
+    ctx.stroke();
+
+    // Draw the tower text (name)
+    ctx.fillStyle = 'black';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(name, x + 75 + canvasOffsetX, y + 40 + canvasOffsetY);
         }
 
         // Draw links (lines) between towers that have "next" towers
