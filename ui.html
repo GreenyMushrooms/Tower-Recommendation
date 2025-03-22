@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tower Recommendation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            overflow: hidden; /* Hide overflow for the canvas effect */
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            background-color: #2e8b57; /* Canvas background green */
+            cursor: grab;
+        }
+
+        .tower-box {
+            width: 150px;
+            padding: 15px;
+            background-color: #2e8b57; /* Shiny green color */
+            color: white;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+
+        .tower-box:hover {
+            background-color: #388e3c;
+            transform: scale(1.1);
+        }
+
+        .tower-details {
+            margin-top: 20px;
+            background-color: #333;
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 500px; /* Increased width of the details box */
+            height: 500px; /* Increased height of the details box */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Center the box */
+            display: none;
+            z-index: 200;
+            text-align: center;
+            overflow-y: auto; /* Allow scrolling if content overflows */
+        }
+
+        .tower-details h2 {
+            margin-bottom: 10px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+        }
+
+        /* Prevent movement when details are open */
+        body.no-move {
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas" width="2000" height="2000"></canvas>
+    <div id="tower-details" class="tower-details">
+        <h2 id="tower-name"></h2>
+        <p id="tower-full-name"></p> <!-- Full name of the tower -->
+        <p id="tower-difficulty"></p>
+        <p id="tower-skills"></p>
+        <div id="next-towers"></div>
+        <button onclick="closeDetails()">Close</button> <!-- Close button for details -->
+    </div>
+
+    <script>
+        const towers = {
+            "ToAST": { difficulty: 1.21, skills: ["Mixed"], next: ["ToA", "ToM"], fullName: " Tower of Annoyingly Simple Trials", x: 500, y: 1000 },
+            "ToA": { difficulty: 1.5, skills: ["Mixed"], next: ["ToM"], fullName: "Tower of Anger", x: 800, y: 800 },
+            "ToM": { difficulty: 2.18, skills: ["Mixed"], next: ["ToH", "ToK"], fullName: "Tower of Madness", x: 800, y: 1200 },
+            "ToH": { difficulty: 3.45, skills: ["Mixed"], next: ["ToKY"], fullName: "Tower of Hecc", x: 1100, y: 1000 },
+            "ToK": { difficulty: 3.47, skills: ["Mixed"], next: ["ToH"], fullName: "Tower of Killjoys", x: 1100, y: 800 },
+            "ToKY": { difficulty: 4.14, skills: ["Mixed"], next: [], fullName: "Tower of Keyboard Yeeting", x: 1300, y: 900 },
+        };
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let isDragging = false;
+        let offsetX, offsetY;
+        let canvasOffsetX = 0, canvasOffsetY = 0;
+
+        const overlay = document.createElement('div'); // Dark overlay for details view
+        overlay.className = 'overlay';
+        document.body.appendChild(overlay);
+        overlay.style.display = 'none';
+
+        // Prevent movement when the details view is open
+        function stopMovement() {
+            document.body.classList.add('no-move');
+        }
+
+        function allowMovement() {
+            document.body.classList.remove('no-move');
+        }
+
+        // Draw towers on the canvas with color based on difficulty
+        function drawTower(name, x, y) {
+            let towerColor;
+            switch (true) {
+    case (towers[name].difficulty <= 2):
+        towerColor = '#4b974b'; // easy
+        break;
+    case (towers[name].difficulty <= 3):
+        towerColor = '#dbdb00'; // medium
+        break;
+    case (towers[name].difficulty <= 4):
+        towerColor = '#FE7C00'; //hard
+        break;
+    case (towers[name].difficulty <= 5):
+        towerColor = '#FF3232'; // difficult
+        break;
+    default:
+        towerColor = '#6c757d'; // Gray for difficulty > 3
+        break;
+}
+
+            ctx.fillStyle = towerColor;
+            ctx.fillRect(x + canvasOffsetX, y + canvasOffsetY, 150, 75);
+            ctx.fillStyle = 'black';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(name, x + 75 + canvasOffsetX, y + 40 + canvasOffsetY);
+        }
+
+        // Draw links (lines) between towers that have "next" towers
+        function drawLinks() {
+            Object.keys(towers).forEach(towerName => {
+                const tower = towers[towerName];
+                if (tower.next.length > 0) {
+                    tower.next.forEach(nextTower => {
+                        const startX = tower.x + 75 + canvasOffsetX; // Center of the current tower
+                        const startY = tower.y + 40 + canvasOffsetY; // Center of the current tower
+                        const endX = towers[nextTower].x + 75 + canvasOffsetX; // Center of the next tower
+                        const endY = towers[nextTower].y + 40 + canvasOffsetY; // Center of the next tower
+                        ctx.strokeStyle = '#ffffff'; // White color for the link line
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(startX, startY);
+                        ctx.lineTo(endX, endY);
+                        ctx.stroke();
+                    });
+                }
+            });
+        }
+
+        // Re-render towers on the canvas after dragging and links
+        function renderTowers() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+            drawLinks(); // Draw the links between towers
+            Object.keys(towers).forEach(towerName => {
+                const tower = towers[towerName];
+                drawTower(towerName, tower.x, tower.y); // Draw each tower
+            });
+        }
+
+        // Start dragging
+        canvas.addEventListener('mousedown', (e) => {
+            if (document.body.classList.contains('no-move')) return; // Prevent dragging when details are open
+
+            isDragging = true;
+            offsetX = e.clientX;
+            offsetY = e.clientY;
+            canvas.style.cursor = 'grabbing';
+        });
+
+        // Handle dragging
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging && !document.body.classList.contains('no-move')) {
+                const dx = e.clientX - offsetX;
+                const dy = e.clientY - offsetY;
+                offsetX = e.clientX;
+                offsetY = e.clientY;
+                
+                // Update the canvas offset for continuous dragging
+                canvasOffsetX += dx;
+                canvasOffsetY += dy;
+
+                // Redraw the towers with updated positions
+                renderTowers();
+            }
+        });
+
+        // Stop dragging
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            canvas.style.cursor = 'grab';
+        });
+
+        // Detect if a click is within the boundaries of a tower
+        function detectTowerClick(x, y) {
+            for (let towerName in towers) {
+                const tower = towers[towerName];
+                if (x >= tower.x + canvasOffsetX && x <= tower.x + 150 + canvasOffsetX &&
+                    y >= tower.y + canvasOffsetY && y <= tower.y + 75 + canvasOffsetY) {
+                    return towerName;
+                }
+            }
+            return null;
+        }
+
+        // Handle click to show tower details
+        canvas.addEventListener('click', (e) => {
+            const clickX = e.clientX - canvas.offsetLeft;
+            const clickY = e.clientY - canvas.offsetTop;
+
+            const clickedTower = detectTowerClick(clickX, clickY);
+            if (clickedTower) {
+                showDetails(clickedTower);
+            }
+        });
+
+        // Show details for the selected tower
+        function showDetails(towerName) {
+            const tower = towers[towerName];
+
+            document.getElementById("tower-name").innerText = towerName;
+            document.getElementById("tower-full-name").innerText = `Full Name: ${tower.fullName}`;
+            document.getElementById("tower-difficulty").innerText = `Difficulty: ${tower.difficulty}`;
+            document.getElementById("tower-skills").innerText = `Skills: ${tower.skills.join(", ")}`;
+            document.getElementById("tower-details").style.display = "block";
+
+            // Show the dark overlay
+            overlay.style.display = 'block';
+
+            // Stop movement while the details are open
+            stopMovement();
+
+            const nextTowersDiv = document.getElementById("next-towers");
+            nextTowersDiv.innerHTML = "";
+
+            if (tower.next.length > 0) {
+                tower.next.forEach((nextTower) => {
+                    const nextTowerBox = document.createElement("div");
+                    nextTowerBox.className = "tower-box";
+                    nextTowerBox.innerText = nextTower;
+
+                    // Calculate the difficulty jump
+                    const difficultyJump = (towers[nextTower].difficulty - tower.difficulty).toFixed(2); // Difference in difficulty
+                    const difficultyJumpDisplay = `Jump: ${difficultyJump}`;
+
+                    // Append the difficulty jump to the next tower box
+                    const difficultyJumpElement = document.createElement("p");
+                    difficultyJumpElement.innerText = difficultyJumpDisplay;
+                    nextTowerBox.appendChild(difficultyJumpElement);
+
+                    nextTowerBox.onclick = () => showDetails(nextTower);
+                    nextTowersDiv.appendChild(nextTowerBox);
+                });
+            } else {
+                const noNextTowers = document.createElement("p");
+                noNextTowers.innerText = "No more towers.";
+                nextTowersDiv.appendChild(noNextTowers);
+            }
+        }
+
+        // Close the tower details view
+        function closeDetails() {
+            document.getElementById("tower-details").style.display = "none";
+            overlay.style.display = 'none';
+            allowMovement();
+        }
+
+        renderTowers(); // Initial rendering
+    </script>
+</body>
+</html>
